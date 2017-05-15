@@ -1,0 +1,17 @@
+### Python template
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+### Git ###
+*.orig
+
+
+### Project ###
+input/*
+output_resize_*_*/*
+*.csv
