@@ -15,3 +15,4 @@ __pycache__/
 input/*
 output_resize_*_*/*
 *.csv
+*_test.h5
