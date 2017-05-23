@@ -12,13 +12,15 @@ import os
 from multiprocessing import Pool, cpu_count
 from functools import partial
 from subprocess import check_output
-print(check_output(["ls", "./input"]).decode("utf8"))
+print(check_output(["ls", "/home/diliu/kaggle/train"]).decode("utf8"))
 
-TRAIN_DATA = "./input/train"
+TRAIN_DATA = "/home/diliu/kaggle/train"
 
-TEST_DATA = "./input/test"
+TEST_DATA = "/home/diliu/kaggle/test"
 
-types = ['Type_1','Type_2','Type_3']
+ADDITIONAL_DATA = "/home/diliu/kaggle/additional"
+
+types = ['Type_1','Type_2','Type_3', 'AType_1', 'AType_2', 'AType_3']
 type_ids = []
 type_ids_test = []
 
@@ -28,6 +30,11 @@ for type in enumerate(types):
 
 	type_i_ids = np.array([s[len(TRAIN_DATA)+8:-4] for s in type_i_files])
 	type_ids.append(type_i_ids)
+
+	#type_i_files = glob(os.path.join(ADDITIONAL_DATA, type[1], "*.jpg"))
+
+        #type_i_ids = np.array([s[len(ADDITIONAL_DATA)+9:-4] for s in type_i_files])
+        #type_ids.append(type_i_ids)
 
 # Test set
 type_i_files = glob(os.path.join(TEST_DATA, "*.jpg"))
@@ -167,58 +174,59 @@ def Ra_space(img, Ra_ratio, a_threshold):
 	return Ra
 
 def get_and_crop_image(image_id, image_type, isTest = False):
-	img = get_image_data(image_id, image_type, isTest)
-	initial_shape = img.shape
-	[img, rectangle_cropCircle, tile_size] = cropCircle(img)
+	try:
+		img = get_image_data(image_id, image_type, isTest)
+		initial_shape = img.shape
+		[img, rectangle_cropCircle, tile_size] = cropCircle(img)
 
 
-	imgLab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB);
-	w = img.shape[0]
-	h = img.shape[1]
-	Ra = Ra_space(imgLab, 1.0, 150)
-	a_channel = np.reshape(Ra[:,1], (w,h))
+		imgLab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB);
+		w = img.shape[0]
+		h = img.shape[1]
+		Ra = Ra_space(imgLab, 1.0, 150)
+		a_channel = np.reshape(Ra[:,1], (w,h))
 	
-	g = mixture.GaussianMixture(n_components = 2, covariance_type = 'diag', random_state = 0, init_params = 'kmeans')
-	image_array_sample = shuffle(Ra, random_state=0)[:1000]
-	g.fit(image_array_sample)
-	labels = g.predict(Ra)
-	labels += 1 # Add 1 to avoid labeling as 0 since regionprops ignores the 0-label.
-	
-	# The cluster that has the highest a-mean is selected.
-	labels_2D = np.reshape(labels, (w,h))
-	gg_labels_regions = measure.regionprops(labels_2D, intensity_image = a_channel)
-	gg_intensity = [prop.mean_intensity for prop in gg_labels_regions]
-	cervix_cluster = gg_intensity.index(max(gg_intensity)) + 1
-
-	mask = np.zeros((w * h,1),'uint8')
-	mask[labels==cervix_cluster] = 255
-	mask_2D = np.reshape(mask, (w,h))
-
-	cc_labels = measure.label(mask_2D, background=0)
-	regions = measure.regionprops(cc_labels)
-	areas = [prop.area for prop in regions]
-
-	regions_label = [prop.label for prop in regions]
-	largestCC_label = regions_label[areas.index(max(areas))]
-	mask_largestCC = np.zeros((w,h),'uint8')
-	mask_largestCC[cc_labels==largestCC_label] = 255
-
-	img_masked = img.copy()
-	img_masked[mask_largestCC==0] = (0,0,0)
-	img_masked_gray = cv2.cvtColor(img_masked, cv2.COLOR_RGB2GRAY);
+		g = mixture.GaussianMixture(n_components = 2, covariance_type = 'diag', random_state = 0, init_params = 'kmeans')
+		image_array_sample = shuffle(Ra, random_state=0)[:1000]
+		g.fit(image_array_sample)
+		labels = g.predict(Ra)
+		labels += 1 # Add 1 to avoid labeling as 0 since regionprops ignores the 0-label.
+		
+		# The cluster that has the highest a-mean is selected.
+		labels_2D = np.reshape(labels, (w,h))
+		gg_labels_regions = measure.regionprops(labels_2D, intensity_image = a_channel)
+		gg_intensity = [prop.mean_intensity for prop in gg_labels_regions]
+		cervix_cluster = gg_intensity.index(max(gg_intensity)) + 1
+		
+		mask = np.zeros((w * h,1),'uint8')
+		mask[labels==cervix_cluster] = 255
+		mask_2D = np.reshape(mask, (w,h))
+		
+		cc_labels = measure.label(mask_2D, background=0)
+		regions = measure.regionprops(cc_labels)
+		areas = [prop.area for prop in regions]
+		
+		regions_label = [prop.label for prop in regions]
+		largestCC_label = regions_label[areas.index(max(areas))]
+		mask_largestCC = np.zeros((w,h),'uint8')
+		mask_largestCC[cc_labels==largestCC_label] = 255
 			
-	_,thresh_mask = cv2.threshold(img_masked_gray,0,255,0)
-			
-	kernel = np.ones((11,11), np.uint8)
-	thresh_mask = cv2.dilate(thresh_mask, kernel, iterations = 1)
-	thresh_mask = cv2.erode(thresh_mask, kernel, iterations = 2)
-	_, contours_mask, _ = cv2.findContours(thresh_mask.copy(),cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
-	main_contour = sorted(contours_mask, key = cv2.contourArea, reverse = True)[0]
-	cv2.drawContours(img, main_contour, -1, 255, 3)
-	
-	x,y,w,h = cv2.boundingRect(main_contour)
-	
-	rectangle = [x+rectangle_cropCircle[2],
+		img_masked = img.copy()
+		img_masked[mask_largestCC==0] = (0,0,0)
+		img_masked_gray = cv2.cvtColor(img_masked, cv2.COLOR_RGB2GRAY);
+				
+		_,thresh_mask = cv2.threshold(img_masked_gray,0,255,0)
+					
+		kernel = np.ones((11,11), np.uint8)
+		thresh_mask = cv2.dilate(thresh_mask, kernel, iterations = 1)
+		thresh_mask = cv2.erode(thresh_mask, kernel, iterations = 2)
+		_, contours_mask, _ = cv2.findContours(thresh_mask.copy(),cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
+		main_contour = sorted(contours_mask, key = cv2.contourArea, reverse = True)[0]
+		cv2.drawContours(img, main_contour, -1, 255, 3)
+		
+		x,y,w,h = cv2.boundingRect(main_contour)
+		
+		rectangle = [x+rectangle_cropCircle[2],
 				 y+rectangle_cropCircle[0],
 				 w,
 				 h,
@@ -227,8 +235,9 @@ def get_and_crop_image(image_id, image_type, isTest = False):
 				 tile_size[0],
 				 tile_size[1]]
 
-	return [image_id, img, rectangle]
-
+		return [image_id, img, rectangle]
+	except:
+		return None
 
 
 def parallelize_image_cropping(image_ids):
@@ -240,6 +249,8 @@ def parallelize_image_cropping(image_ids):
 		partial_get_and_crop = partial(get_and_crop_image, image_type = type[1])    
 		ret = p.map(partial_get_and_crop, image_ids[type[0]])
 		for i in range(len(ret)):
+			if ret[i] == None:
+				continue
 			out.write(image_ids[type[0]][i])
 			out.write(',' + str(type[1]))
 			out.write(',' + str(ret[i][2][0]))
@@ -266,6 +277,8 @@ def parallelize_image_cropping_test(image_ids):
 	partial_get_and_crop = partial(get_and_crop_image, image_type = type[1], isTest = True)    
 	ret = p.map(partial_get_and_crop, image_ids[0])
 	for i in range(len(ret)):
+		if ret[i] == None:
+			continue
 		out.write(image_ids[0][i])
 		out.write(',' + str("TEST"))
 		out.write(',' + str(ret[i][2][0]))
@@ -284,6 +297,7 @@ def parallelize_image_cropping_test(image_ids):
 	return
 
 if __name__ == '__main__':
+	print "train data started..."
 	parallelize_image_cropping(type_ids)
-	
-	# parallelize_image_cropping_test(type_ids_test)
+	print "test_data_started..."
+	parallelize_image_cropping_test(type_ids_test)
