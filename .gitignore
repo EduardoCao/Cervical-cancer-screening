@@ -16,3 +16,4 @@ input/*
 output_resize_*_*/*
 *.csv
 *_test.h5
+*.h5

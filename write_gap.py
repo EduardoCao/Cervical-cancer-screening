@@ -24,10 +24,10 @@ def write_gap(MODEL, image_size, lambda_func=None):
 
     train = model.predict_generator(train_generator, train_generator.nb_sample)
     test = model.predict_generator(test_generator, test_generator.nb_sample)
-    with h5py.File("my_gap_%s.h5"%MODEL.func_name) as h:
-        h.create_dataset("mytrain0", data=train)
-        h.create_dataset("mytest0", data=test)
-        h.create_dataset("mylabel0", data=train_generator.classes)
+    with h5py.File("my_gap_%s_1.h5"%MODEL.func_name) as h:
+        h.create_dataset("mytrain1", data=train)
+        h.create_dataset("mytest1", data=test)
+        h.create_dataset("mylabel1", data=train_generator.classes)
 
 write_gap(ResNet50, (224, 224))
 write_gap(InceptionV3, (299, 299), inception_v3.preprocess_input)
