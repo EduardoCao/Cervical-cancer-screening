@@ -1,0 +1,1 @@
+LD_LIBRARY_PATH="/home/diliu/local/my_libc_env/libc6_2.17/lib/x86_64-linux-gnu/:/home/diliu/local/my_libc_env/libc6_2.17/usr/lib64/" /home/diliu/local/my_libc_env/libc6_2.17/lib/x86_64-linux-gnu/ld-2.17.so '/home/diliu/venv/bin/python' segmentation.py

@@ -1,3 +1,5 @@
+import sysconfig
+sysconfig.get_config_var('Py_UNICODE_SIZE')
 import h5py
 import numpy as np
 from sklearn.utils import shuffle
